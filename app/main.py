@@ -5,6 +5,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.exceptions import TelegramRetryAfter
 
 from app.bot.dispatcher import build_dispatcher
 from app.config import get_settings
@@ -12,6 +13,34 @@ from app.database import init_db
 from app.scheduler.manager import build_scheduler
 
 logger = logging.getLogger(__name__)
+
+
+async def _reset_webhook(bot: Bot, *, attempts: int = 5) -> None:
+    """Drop pending updates, waiting out Telegram's rate limit on ``delete_webhook``.
+
+    ``DeleteWebhook`` is rate-limited aggressively by Telegram. When the container
+    restarts in a crash loop, each start re-hits it and keeps tripping the limit;
+    instead we honour ``retry_after`` and retry, and if the limit never clears we
+    continue to polling anyway (this bot sets no webhook).
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+            return
+        except TelegramRetryAfter as exc:
+            if attempt == attempts:
+                logger.warning(
+                    "delete_webhook still rate-limited after %s attempts; continuing",
+                    attempts,
+                )
+                return
+            logger.warning(
+                "delete_webhook rate-limited (attempt %s/%s); waiting %ss",
+                attempt,
+                attempts,
+                exc.retry_after,
+            )
+            await asyncio.sleep(exc.retry_after)
 
 
 async def run_bot() -> None:
@@ -31,7 +60,7 @@ async def run_bot() -> None:
     scheduler = build_scheduler(bot, settings)
     scheduler.start()
     try:
-        await bot.delete_webhook(drop_pending_updates=True)
+        await _reset_webhook(bot)
         logger.info("Bot started. Polling for updates...")
         await dp.start_polling(bot)
     finally:
