@@ -146,6 +146,95 @@ the bot is running — it uses SQLite's online backup API for a consistent snaps
 `backups/` is gitignored. Schedule a periodic backup (e.g. daily) with your OS scheduler
 for production use.
 
+## Deployment (Docker Compose)
+
+Run the bot in a single container on a Linux VPS (Ubuntu 22.04/24.04) with Docker
+Compose v2. The bot uses Telegram **long polling** and runs APScheduler in-process, so it
+must stay a **single instance** — do not scale replicas.
+
+### Prerequisites
+
+- Docker Engine and Docker Compose v2 on the VPS.
+- The VPS can reach `https://api.telegram.org`.
+
+### Clone or update
+
+```bash
+git clone <your-repo-url> linkedin-growth-os
+cd linkedin-growth-os
+# on an existing checkout, pull the latest instead:
+git pull
+```
+
+### Create the deployment `.env`
+
+```bash
+cp .env.example .env
+nano .env   # fill in TELEGRAM_BOT_TOKEN and TELEGRAM_ALLOWED_USER_ID
+```
+
+`.env` is gitignored — never commit it. The container loads it via Compose `env_file`.
+
+### Start
+
+```bash
+docker compose up -d --build
+```
+
+### Logs
+
+```bash
+docker compose logs -f bot
+```
+
+### Restart / stop
+
+```bash
+docker compose restart bot     # restart in place
+docker compose stop            # stop the container
+docker compose down            # stop and remove the container (keeps the data volume)
+```
+
+### Update after a Git change
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+### Back up / restore the SQLite database
+
+The database lives in the named volume `data`, mounted at `/app/data` inside the
+container, so it survives container recreation.
+
+```bash
+# Backup (safe while running — uses SQLite's online backup API):
+docker compose exec bot python scripts/backup.py backup
+docker compose cp bot:/app/backups/linkedin_growth_<timestamp>.db ./backup.db
+# Portable JSON export (alternative):
+docker compose exec bot python scripts/backup.py export-json
+docker compose cp bot:/app/backups/linkedin_growth_<timestamp>.json ./export.json
+
+# Restore (stop the bot first):
+docker compose stop bot
+docker compose cp ./backup.db bot:/app/data/linkedin_growth.db
+docker compose start bot
+```
+
+### Troubleshooting
+
+- **Invalid token / 401 Unauthorized** — check `TELEGRAM_BOT_TOKEN` in `.env`, then
+  `docker compose restart bot`.
+- **Bot ignores your messages** — `TELEGRAM_ALLOWED_USER_ID` must be your numeric
+  Telegram id; confirm it and restart.
+- **Can't reach Telegram** — from the VPS: `curl -sS https://api.telegram.org`; if it
+  fails, the VPS has no outbound HTTPS access to Telegram.
+- **Time is wrong** — set `TIMEZONE` (IANA name) in `.env`; the `tzdata` package is
+  already installed in the image.
+
+> There is no container health check: a generic HTTP probe cannot verify that Telegram
+> polling is healthy, so watch `docker compose logs -f bot` instead.
+
 ## Development
 
 ```bash
@@ -158,4 +247,3 @@ for production use.
 Ruff config and pytest options are in `pyproject.toml`. Tests run against an in-memory
 SQLite database and cover services, repositories, time conversion, scoring, scheduler
 idempotency, the LLM abstraction and a bot smoke test (all routers wired).
-"# linkedin-growth-os" 
