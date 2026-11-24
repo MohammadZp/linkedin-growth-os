@@ -4,18 +4,19 @@ import asyncio
 
 import pytest
 from aiogram.exceptions import TelegramRetryAfter
-from app.main import _reset_webhook
+from app.main import _call_with_retry
 
 
-class _FakeBot:
+class _FlakyCall:
     def __init__(self, failures: int = 0) -> None:
         self.calls = 0
         self.failures = failures
 
-    async def delete_webhook(self, drop_pending_updates: bool = False) -> None:
+    async def __call__(self) -> str:
         self.calls += 1
         if self.calls <= self.failures:
             raise TelegramRetryAfter(None, "flood control", 0)
+        return "ok"
 
 
 async def _noop_sleep(seconds: float) -> None:
@@ -23,24 +24,25 @@ async def _noop_sleep(seconds: float) -> None:
 
 
 @pytest.mark.asyncio
-async def test_reset_webhook_succeeds_immediately(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_call_with_retry_succeeds_immediately(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(asyncio, "sleep", _noop_sleep)
-    bot = _FakeBot(failures=0)
-    await _reset_webhook(bot)
-    assert bot.calls == 1
+    flaky = _FlakyCall(failures=0)
+    assert await _call_with_retry(flaky) == "ok"
+    assert flaky.calls == 1
 
 
 @pytest.mark.asyncio
-async def test_reset_webhook_retries_on_flood(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_call_with_retry_retries_on_flood(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(asyncio, "sleep", _noop_sleep)
-    bot = _FakeBot(failures=2)
-    await _reset_webhook(bot)
-    assert bot.calls == 3
+    flaky = _FlakyCall(failures=2)
+    assert await _call_with_retry(flaky) == "ok"
+    assert flaky.calls == 3
 
 
 @pytest.mark.asyncio
-async def test_reset_webhook_gives_up_gracefully(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_call_with_retry_raises_after_exhaustion(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(asyncio, "sleep", _noop_sleep)
-    bot = _FakeBot(failures=99)
-    await _reset_webhook(bot)  # must not raise
-    assert bot.calls == 5  # default attempts
+    flaky = _FlakyCall(failures=99)
+    with pytest.raises(TelegramRetryAfter):
+        await _call_with_retry(flaky, attempts=5)
+    assert flaky.calls == 5
