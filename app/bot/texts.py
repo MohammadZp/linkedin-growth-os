@@ -107,12 +107,14 @@ MSG_START = (
 
 MSG_HELP = (
     "دستورها:\n"
+    "/briefing — بریفینگ روزانه\n"
     "/today — تسک‌های امروز\n"
     "/week — برنامه هفته\n"
     "/ideas — مدیریت ایده‌ها\n"
     "/content — مدیریت محتوا\n"
     "/stats — آمار\n"
     "/leads — لیدها و شبکه‌سازی\n"
+    "/review — مرور هفتگی\n"
     "/settings — تنظیمات\n"
     "/cancel — لغو عملیات جاری"
 )

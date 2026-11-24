@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.config import Settings
 from app.database.models import ContentItem, Task
 from app.domain.enums import ContentStatus, ContentType
-from app.scheduler.briefing import build_daily_briefing, build_weekly_summary
+from app.services.briefing import build_daily_briefing, build_weekly_summary
 from app.services.time import local_date, now_utc
 from sqlalchemy.orm import Session
 

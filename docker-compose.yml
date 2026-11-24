@@ -13,7 +13,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-# The bot polls Telegram outbound only and uses APScheduler in-process. It must
+# The bot polls Telegram outbound only. It must
 # not be scaled beyond a single instance, so no ports are published and no
 # replicas are configured.
 

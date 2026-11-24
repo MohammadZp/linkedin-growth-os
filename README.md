@@ -11,7 +11,7 @@ helps you stay consistent and honest about what is actually working.
 ## What it does
 
 - **Daily tasks** — today's list, overdue items, mark complete, next scheduled publication,
-  and a daily briefing at a configurable time.
+  and an on-demand daily briefing (`/briefing`).
 - **Content pipeline** — ideas → researching → drafting → review → scheduled → published →
   archived, with duplicate-schedule protection.
 - **Idea management** — inbox/shortlisted/selected/rejected with a transparent,
@@ -31,7 +31,7 @@ All bot messages are in **Persian**; code, identifiers, logs and docs are in **E
 
 ## Stack
 
-Python 3.12+, aiogram 3.x, SQLAlchemy 2.x (SQLite), APScheduler, pydantic-settings,
+Python 3.12+, aiogram 3.x, SQLAlchemy 2.x (SQLite), pydantic-settings,
 pytest, ruff. Versions are pinned in `pyproject.toml`.
 
 ## Quick start
@@ -60,10 +60,7 @@ Copy `.env.example` to `.env` and fill in real values. Never commit `.env`.
 | `TELEGRAM_BOT_TOKEN` | yes | — | Bot token from @BotFather |
 | `TELEGRAM_ALLOWED_USER_ID` | yes | — | Telegram user id of the only allowed user |
 | `DATABASE_URL` | no | `sqlite:///./data/linkedin_growth.db` | SQLAlchemy URL |
-| `TIMEZONE` | no | `Asia/Tehran` | IANA timezone for scheduling/formatting |
-| `DAILY_BRIEFING_TIME` | no | `08:00` | Daily briefing time, 24h `HH:MM` |
-| `WEEKLY_REVIEW_DAY` | no | `4` | 0=Monday … 6=Sunday |
-| `WEEKLY_REVIEW_TIME` | no | `18:00` | Weekly review time, 24h `HH:MM` |
+| `TIMEZONE` | no | `Asia/Tehran` | IANA timezone for date formatting |
 | `PUBLISHING_TARGET_PER_WEEK` | no | `3` | Weekly publishing goal |
 | `MAX_DAILY_TASKS` | no | `3` | Daily task cap |
 | `DEFAULT_CONTENT_LANGUAGE` | no | `en` | Default content language |
@@ -80,7 +77,8 @@ Copy `.env.example` to `.env` and fill in real values. Never commit `.env`.
 | --- | --- |
 | `/start` | Greet and register the user |
 | `/help` | Usage overview |
-| `/today` | Today's tasks, overdue, next publication |
+| `/briefing` | Daily briefing (today's priorities, overdue, next publication) |
+| `/today` | Today's tasks (toggle complete / delete) |
 | `/week` | Upcoming scheduled publications |
 | `/ideas` | Manage and score content ideas |
 | `/content` | Manage the content pipeline |
@@ -104,7 +102,6 @@ app/
   repositories/      # data access
   services/          # business rules (content, tasks, analytics, contacts, review, …)
   bot/               # aiogram handlers, keyboards, texts, middlewares
-  scheduler/         # APScheduler jobs (briefing + weekly review)
   ai/                # optional LLM provider abstraction + prompts
 scripts/
   backup.py          # database backup / JSON export
@@ -114,13 +111,12 @@ tests/
 ## Architecture notes
 
 - **Time** is stored in UTC and converted to the configured timezone only at the
-  boundary (scheduler, formatting). Dates are naive.
+  formatting boundary. Dates are naive.
 - **Enums** live in `app/domain/enums.py` and are stored as their string `.value`.
 - **Repositories** wrap the SQLAlchemy `Session`; business rules live in `app/services`,
   never in handlers.
-- **Scheduler** uses APScheduler's `AsyncIOScheduler` with fixed job ids,
-  `replace_existing=True`, `coalesce=True` and `max_instances=1`, plus idempotency
-  markers in the `app_settings` table so briefings/reviews are not double-sent.
+- **No background scheduler** — the daily briefing and weekly review are triggered
+  manually via `/briefing` and `/review`.
 - **LLM** is behind a provider abstraction (`app/ai/providers.py`). Prompts live in
   `app/ai/prompts.py`, forbid fabricating facts and require plain text (no markdown).
 
@@ -149,8 +145,8 @@ for production use.
 ## Deployment (Docker Compose)
 
 Run the bot in a single container on a Linux VPS (Ubuntu 22.04/24.04) with Docker
-Compose v2. The bot uses Telegram **long polling** and runs APScheduler in-process, so it
-must stay a **single instance** — do not scale replicas.
+Compose v2. The bot uses Telegram **long polling**, so it must stay a **single
+instance** — do not scale replicas.
 
 ### Prerequisites
 
@@ -245,5 +241,5 @@ docker compose start bot
 ```
 
 Ruff config and pytest options are in `pyproject.toml`. Tests run against an in-memory
-SQLite database and cover services, repositories, time conversion, scoring, scheduler
-idempotency, the LLM abstraction and a bot smoke test (all routers wired).
+SQLite database and cover services, repositories, time conversion, scoring, the LLM
+abstraction and a bot smoke test (all routers wired).

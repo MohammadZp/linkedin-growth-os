@@ -29,7 +29,7 @@ def get_engine() -> Engine:
         settings = get_settings()
         connect_args: dict = {}
         if settings.database_url.startswith("sqlite"):
-            # SQLite is used across threads (aiogram handlers + APScheduler).
+            # SQLite is used across threads (aiogram handlers).
             connect_args = {"check_same_thread": False}
             ensure_sqlite_parent_dir(settings.database_url)
         _engine = create_engine(settings.database_url, connect_args=connect_args)

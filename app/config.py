@@ -25,11 +25,8 @@ class Settings(BaseSettings):
     # --- Database ---
     database_url: str = "sqlite:///./data/linkedin_growth.db"
 
-    # --- Time & scheduling ---
+    # --- Time ---
     timezone: str = "Asia/Tehran"
-    daily_briefing_time: str = "08:00"
-    weekly_review_day: int = 4  # 0=Monday .. 6=Sunday (Friday)
-    weekly_review_time: str = "18:00"
 
     # --- Strategy ---
     publishing_target_per_week: int = 3

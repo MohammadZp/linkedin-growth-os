@@ -9,6 +9,7 @@ from app.bot import texts
 from app.config import get_settings
 from app.database import session_scope
 from app.repositories import ContentRepository
+from app.services.briefing import build_daily_briefing
 from app.services.time import format_local, now_utc
 
 router = Router(name="menu")
@@ -42,6 +43,19 @@ async def cmd_week(message: Message) -> None:
     await _render(message, _week_text())
 
 
+# --- Daily briefing ---
+
+
+def _briefing_text() -> str:
+    with session_scope() as session:
+        return build_daily_briefing(session, get_settings())
+
+
+@router.message(Command("briefing"))
+async def cmd_briefing(message: Message) -> None:
+    await _render(message, _briefing_text())
+
+
 # --- Settings ---
 
 
@@ -53,7 +67,6 @@ def _settings_text() -> str:
     return (
         f"⚙️ تنظیمات فعلی:\n"
         f"منطقه زمانی: {s.timezone}\n"
-        f"زمان بریفینگ روزانه: {s.daily_briefing_time}\n"
         f"هدف انتشار هفتگی: {s.publishing_target_per_week} محتوا\n"
         f"حداکثر تسک روزانه: {s.max_daily_tasks}\n"
         f"زبان پیش‌فرض محتوا: {s.default_content_language}\n"

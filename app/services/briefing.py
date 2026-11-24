@@ -1,4 +1,4 @@
-"""Pure builders for the scheduled briefing texts (testable without Telegram)."""
+"""Pure builders for briefing and weekly-summary texts (testable without Telegram)."""
 
 from __future__ import annotations
 

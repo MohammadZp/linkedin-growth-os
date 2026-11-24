@@ -38,3 +38,8 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Node / Claude Code CLI artifacts (not part of this Python project)
+node_modules/
+package.json
+package-lock.json

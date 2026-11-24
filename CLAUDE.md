@@ -5,7 +5,7 @@ performance analytics, and a lightweight CRM.
 
 ## Stack
 
-Python 3.12+, aiogram 3.x, SQLAlchemy 2.x (SQLite), APScheduler, pydantic-settings,
+Python 3.12+, aiogram 3.x, SQLAlchemy 2.x (SQLite), pydantic-settings,
 pytest, ruff.
 
 ## Commands (Windows)
@@ -19,7 +19,7 @@ pytest, ruff.
 ## Conventions
 
 - **Time:** all datetimes are stored in UTC; convert to the configured timezone
-  (default `Asia/Tehran`) only at the boundary (scheduler, formatting). Dates are naive.
+  (default `Asia/Tehran`) only at the formatting boundary. Dates are naive.
 - **Language:** bot user-facing messages are Persian; code, identifiers, logs, docs are English.
 - **Enums** live in `app/domain/enums.py`; SQLAlchemy models in `app/database/models.py`.
   Enums are stored as their string `.value`.

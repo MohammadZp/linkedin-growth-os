@@ -1,6 +1,6 @@
 # LinkedIn Growth OS — production image
 #
-# The bot uses Telegram long polling and APScheduler, so it must run as a single
+# The bot uses Telegram long polling, so it must run as a single
 # instance. It exposes no inbound ports.
 
 FROM python:3.13-slim

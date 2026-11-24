@@ -11,7 +11,6 @@ from aiogram.exceptions import TelegramRetryAfter
 from app.bot.dispatcher import build_dispatcher
 from app.config import get_settings
 from app.database import init_db
-from app.scheduler.manager import build_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -59,16 +58,11 @@ async def run_bot() -> None:
 
     bot = Bot(token=settings.telegram_bot_token, default=DefaultBotProperties())
     dp: Dispatcher = build_dispatcher(settings)
-    scheduler = build_scheduler(bot, settings)
-    scheduler.start()
-    try:
-        # Warm bot.me() once so start_polling's internal getMe hits the cache
-        # instead of calling Telegram directly and tripping flood control.
-        await _call_with_retry(bot.me, label="getMe")
-        logger.info("Bot started. Polling for updates...")
-        await dp.start_polling(bot)
-    finally:
-        scheduler.shutdown(wait=False)
+    # Warm bot.me() once so start_polling's internal getMe hits the cache
+    # instead of calling Telegram directly and tripping flood control.
+    await _call_with_retry(bot.me, label="getMe")
+    logger.info("Bot started. Polling for updates...")
+    await dp.start_polling(bot)
 
 
 def main() -> None:
